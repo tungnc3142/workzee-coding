@@ -7,7 +7,7 @@ import {
 } from 'native-base';
 import {MutableRefObject} from 'react';
 
-type AllSurveyValues = {
+export type AllSurveyValues = {
   [key: string]: any;
 };
 
@@ -73,7 +73,7 @@ export const surveyList: Array<MultiStepSurveyQuestion> = [
     key: '3',
     questionText: 'How helpful is your guidance counselor?',
     skipable: true,
-    initialValue: 'Excellent',
+    initialValue: 'Helpful',
     answerComponent: Radio,
     answers: [
       {
@@ -93,5 +93,27 @@ export const surveyList: Array<MultiStepSurveyQuestion> = [
         label: 'Not Helpful',
       },
     ],
+  },
+  {
+    key: '4',
+    questionText: 'Do you have a dog?',
+    answers: [
+      {
+        label: 'Yes',
+        value: 'Yes',
+      },
+      {
+        label: 'No',
+        value: 'No',
+      },
+    ],
+    skipable: false,
+    answerComponent: Radio,
+  },
+  {
+    key: '5',
+    questionText: 'What’s your dog’s name?',
+    answerComponent: Input,
+    isPresent: value => value?.value === 'Yes',
   },
 ];

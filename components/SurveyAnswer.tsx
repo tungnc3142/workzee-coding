@@ -25,23 +25,21 @@ export const SurveyAnswer: FC<Props> = ({survey, onChange, value}) => {
   if (!survey.answers?.length) {
     var Input = Component as IInputComponentType;
     return (
-      <Box my={3}>
+      <Box my={3} key={survey.key}>
         <Input value={value} onChangeText={onChange} />
       </Box>
     );
   }
   var Radio = Component as IRadioComponentType;
   return (
-    <Box my={3}>
-      {survey.answers?.map(e => (
-        <Box>
-          <Radio.Group name="survey-radio" onChange={onChange} value={value}>
-            <Radio my={2} value={e.value}>
-              {e.label}
-            </Radio>
-          </Radio.Group>
-        </Box> // TODO: render answer with multi option
-      ))}
+    <Box my={3} key={survey.key}>
+      <Radio.Group name={survey.questionText} onChange={onChange} value={value}>
+        {survey.answers?.map(e => (
+          <Radio my={2} value={e.value}>
+            {e.label}
+          </Radio>
+        ))}
+      </Radio.Group>
     </Box>
   );
 };

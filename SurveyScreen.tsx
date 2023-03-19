@@ -1,6 +1,6 @@
 import React, {useCallback, useEffect, useMemo, useState} from 'react';
 import {StyleSheet} from 'react-native';
-import {surveyList} from './mockupData';
+import {AllSurveyValues, surveyList} from './mockupData';
 import {Box, FormControl} from 'native-base';
 import {SafeAreaView} from 'react-native-safe-area-context';
 import {
@@ -15,10 +15,11 @@ export type AnswerType = {
 };
 
 const SurveyScreen: React.FC = ({}) => {
-  const [answers, setAnswer] = useState<Array<AnswerType>>([]);
+  const [answers, setAnswer] = useState<Array<AllSurveyValues>>([]);
   const [currentSurveyIndex, setCurrentSurvey] = useState<number>(0);
   const [isInvalid, setIsInvalid] = useState<boolean>(false);
   const [showResult, setShowResult] = useState<boolean>(false);
+  const [isEditQuestion, setIsEditQuestion] = useState<boolean>(false);
 
   const survey = useMemo(
     () => surveyList[currentSurveyIndex],
@@ -39,6 +40,19 @@ const SurveyScreen: React.FC = ({}) => {
     return 'Please enter the answer';
   }, [currentSurveyIndex]);
 
+  const showResultAfterEditAnswer = useCallback(() => {
+    setShowResult(true);
+    setIsEditQuestion(false);
+  }, []);
+
+  const updateAnswerValue = useCallback((value: any, index: number) => {
+    setAnswer(prev => {
+      const _allAnswer = [...prev];
+      _allAnswer[index].value = value;
+      return _allAnswer;
+    });
+  }, []);
+
   const onPrev = useCallback(() => {
     if (!checkIsValidAnswer()) {
       setIsInvalid(true);
@@ -58,12 +72,45 @@ const SurveyScreen: React.FC = ({}) => {
     if (isInvalid) {
       setIsInvalid(false);
     }
-    if (currentSurveyIndex !== surveyList.length - 1) {
-      setCurrentSurvey(prev => prev + 1);
-    } else {
+
+    if (currentSurveyIndex === surveyList.length - 1) {
       setShowResult(true);
+      return;
     }
-  }, [checkIsValidAnswer, currentSurveyIndex, isInvalid]);
+    // TODO: check is next question is present
+    const nextQuestion = surveyList[currentSurveyIndex + 1];
+    const currentAnswer = answers[currentSurveyIndex];
+    if (nextQuestion.isPresent !== undefined) {
+      // TODO: show question present
+      if (nextQuestion.isPresent(currentAnswer)) {
+        setCurrentSurvey(prev => prev + 1);
+      } else {
+        // show next question of nextQuestion variable(rule: There are questions that are only present if other question has particular value)
+        if (currentSurveyIndex + 2 < surveyList.length - 1) {
+          setCurrentSurvey(prev => prev + 2);
+        } else {
+          // is last question in survey
+          setShowResult(true);
+        }
+        // set result answer of nextQuestion variable to undefined
+        updateAnswerValue(undefined, currentSurveyIndex + 1);
+      }
+    } else {
+      if (isEditQuestion) {
+        showResultAfterEditAnswer();
+        return;
+      }
+      setCurrentSurvey(prev => prev + 1);
+    }
+  }, [
+    answers,
+    checkIsValidAnswer,
+    currentSurveyIndex,
+    isEditQuestion,
+    isInvalid,
+    showResultAfterEditAnswer,
+    updateAnswerValue,
+  ]);
 
   const disableNext = useMemo(() => {
     return currentSurveyIndex === surveyList.length - 1;
@@ -74,6 +121,7 @@ const SurveyScreen: React.FC = ({}) => {
   }, [currentSurveyIndex]);
 
   const onEditAnswer = useCallback((index: number) => {
+    setIsEditQuestion(true);
     setShowResult(false);
     setCurrentSurvey(index);
   }, []);
@@ -83,9 +131,9 @@ const SurveyScreen: React.FC = ({}) => {
     var answer: AnswerType = {
       value: '',
     };
-    surveyList.forEach(_ => {
+    surveyList.forEach(s => {
       answer = {
-        value: undefined,
+        value: s?.initialValue || undefined,
       };
       initialAnswer.push(answer);
     });
@@ -106,11 +154,7 @@ const SurveyScreen: React.FC = ({}) => {
               <SurveyAnswer
                 survey={survey}
                 onChange={value => {
-                  setAnswer(prev => {
-                    const _allAnswer = [...prev];
-                    _allAnswer[currentSurveyIndex].value = value;
-                    return _allAnswer;
-                  });
+                  updateAnswerValue(value, currentSurveyIndex);
                 }}
                 value={answers[currentSurveyIndex]?.value}
               />
