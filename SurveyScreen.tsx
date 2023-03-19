@@ -1,67 +1,135 @@
-import React, {useCallback, useState} from 'react';
-import {StyleSheet, View} from 'react-native';
-import {
-  surveyList,
-  MultiStepSurveyQuestion,
-  AnswerComponent,
-} from './mockupData';
-import {Box, Text} from 'native-base';
+import React, {useCallback, useEffect, useMemo, useState} from 'react';
+import {StyleSheet} from 'react-native';
+import {surveyList} from './mockupData';
+import {Box, FormControl} from 'native-base';
 import {SafeAreaView} from 'react-native-safe-area-context';
+import {
+  SurveyAction,
+  SurveyAnswer,
+  SurveyResult,
+  SurveyTitle,
+} from './components';
+
+export type AnswerType = {
+  value: any;
+};
 
 const SurveyScreen: React.FC = ({}) => {
-  const [currentSurveyIndex, setCurrentSurvey] = useState<number>(1);
+  const [answers, setAnswer] = useState<Array<AnswerType>>([]);
+  const [currentSurveyIndex, setCurrentSurvey] = useState<number>(0);
+  const [isInvalid, setIsInvalid] = useState<boolean>(false);
+  const [showResult, setShowResult] = useState<boolean>(false);
 
-  const renderAnswerSurvey = useCallback((survey: MultiStepSurveyQuestion) => {
-    const Component: React.ComponentType<AnswerComponent> | undefined =
-      survey.answerComponent;
-    return (
-      <Box>
-        {survey.answers?.map(e => (
-          <Box>
-            {Component !== undefined && (
-              <Component
-                value={e.value}
-                onChange={value => {
-                  console.log(value);
-                }}
-                allAnswers={{}}
-              />
-            )}
-          </Box>
-        ))}
-        {Component !== undefined && (
-          <Component
-            value={''}
-            onChange={value => {
-              console.log(value);
-            }}
-            allAnswers={{}}
-          />
-        )}
-      </Box>
-    );
+  const survey = useMemo(
+    () => surveyList[currentSurveyIndex],
+    [currentSurveyIndex],
+  );
+
+  const checkIsValidAnswer = useCallback(() => {
+    if (surveyList[currentSurveyIndex].skipable) {
+      return true;
+    }
+    return answers[currentSurveyIndex].value !== undefined;
+  }, [answers, currentSurveyIndex]);
+
+  const messageError = useMemo(() => {
+    if (surveyList[currentSurveyIndex].answers?.length) {
+      return 'Please select a answer';
+    }
+    return 'Please enter the answer';
+  }, [currentSurveyIndex]);
+
+  const onPrev = useCallback(() => {
+    if (!checkIsValidAnswer()) {
+      setIsInvalid(true);
+      return;
+    }
+    if (isInvalid) {
+      setIsInvalid(false);
+    }
+    setCurrentSurvey(prev => prev - 1);
+  }, [checkIsValidAnswer, isInvalid]);
+
+  const onNext = useCallback(() => {
+    if (!checkIsValidAnswer()) {
+      setIsInvalid(true);
+      return;
+    }
+    if (isInvalid) {
+      setIsInvalid(false);
+    }
+    if (currentSurveyIndex !== surveyList.length - 1) {
+      setCurrentSurvey(prev => prev + 1);
+    } else {
+      setShowResult(true);
+    }
+  }, [checkIsValidAnswer, currentSurveyIndex, isInvalid]);
+
+  const disableNext = useMemo(() => {
+    return currentSurveyIndex === surveyList.length - 1;
+  }, [currentSurveyIndex]);
+
+  const disablePrevious = useMemo(() => {
+    return currentSurveyIndex === 0;
+  }, [currentSurveyIndex]);
+
+  const onEditAnswer = useCallback((index: number) => {
+    setShowResult(false);
+    setCurrentSurvey(index);
   }, []);
 
-  const renderSurvey = useCallback(() => {
-    const _survey = surveyList[currentSurveyIndex];
-    return (
-      <Box key={_survey.key}>
-        <Text bold fontSize={16}>
-          {currentSurveyIndex + 1}.{_survey.questionText}
-          {!_survey.skipable && (
-            <Text bold style={styles.txtRequire}>
-              {' '}
-              *
-            </Text>
-          )}
-        </Text>
-        {!_survey.answers?.length && renderAnswerSurvey(_survey)}
-      </Box>
-    );
-  }, [currentSurveyIndex, renderAnswerSurvey]);
+  useEffect(() => {
+    const initialAnswer: Array<AnswerType> = [];
+    var answer: AnswerType = {
+      value: '',
+    };
+    surveyList.forEach(_ => {
+      answer = {
+        value: undefined,
+      };
+      initialAnswer.push(answer);
+    });
+    setAnswer(initialAnswer);
+  }, []);
+
   return (
     <SafeAreaView style={styles.container}>
-      <View style={[styles.container, styles.content]}>{renderSurvey()}</View>
+      <Box style={[styles.container, styles.content]}>
+        {!showResult ? (
+          <FormControl style={styles.container} isInvalid={isInvalid}>
+            <SurveyTitle
+              index={currentSurveyIndex}
+              title={survey.questionText}
+              skipable={survey.skipable}
+            />
+            <Box style={styles.container}>
+              <SurveyAnswer
+                survey={survey}
+                onChange={value => {
+                  setAnswer(prev => {
+                    const _allAnswer = [...prev];
+                    _allAnswer[currentSurveyIndex].value = value;
+                    return _allAnswer;
+                  });
+                }}
+                value={answers[currentSurveyIndex]?.value}
+              />
+              <FormControl.ErrorMessage>
+                {messageError}
+              </FormControl.ErrorMessage>
+            </Box>
+            <SurveyAction
+              onPrev={onPrev}
+              onNext={onNext}
+              disableNext={disableNext}
+              disablePrevious={disablePrevious}
+              isLastQuestion={currentSurveyIndex === surveyList.length - 1}
+            />
+          </FormControl>
+        ) : (
+          <SurveyResult answers={answers} onEditAnswer={onEditAnswer} />
+        )}
+      </Box>
     </SafeAreaView>
   );
 };

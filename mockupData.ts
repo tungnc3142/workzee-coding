@@ -1,8 +1,27 @@
-import {answerTextInput, answerRadioButton} from './components';
+import {
+  IInputProps,
+  IRadioGroupProps,
+  IRadioProps,
+  Input,
+  Radio,
+} from 'native-base';
+import {MutableRefObject} from 'react';
 
 type AllSurveyValues = {
   [key: string]: any;
 };
+
+export type IRadioComponentType = ((props: IRadioProps) => JSX.Element) & {
+  Group: React.MemoExoticComponent<
+    (
+      props: IRadioGroupProps & {
+        ref?: MutableRefObject<any>;
+      },
+    ) => JSX.Element
+  >;
+};
+
+export type IInputComponentType = (props: IInputProps) => JSX.Element;
 
 export type AnswerComponent = {
   value: any;
@@ -30,6 +49,7 @@ export const surveyList: Array<MultiStepSurveyQuestion> = [
   {
     key: '1',
     questionText: 'Do you enjoy learning remotely?',
+    answerComponent: Radio,
     answers: [
       {
         label: 'Yes',
@@ -47,14 +67,14 @@ export const surveyList: Array<MultiStepSurveyQuestion> = [
     questionText:
       'Are there any specific strengths of this school that you would like to address?',
     skipable: false,
-    answerComponent: answerTextInput,
+    answerComponent: Input,
   },
   {
     key: '3',
     questionText: 'How helpful is your guidance counselor?',
     skipable: true,
     initialValue: 'Excellent',
-    answerComponent: answerRadioButton,
+    answerComponent: Radio,
     answers: [
       {
         value: 'Extremely Helpful',
