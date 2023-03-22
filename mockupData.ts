@@ -7,6 +7,11 @@ import {
 } from 'native-base';
 import {MutableRefObject} from 'react';
 
+export type AnswerType = {
+  key: string;
+  value: string;
+};
+
 export type AllSurveyValues = {
   [key: string]: any;
 };
@@ -29,6 +34,11 @@ export type AnswerComponent = {
   allAnswers: AllSurveyValues;
 };
 
+type VisibleIfType = {
+  key: string;
+  value: any;
+};
+
 export type MultiStepSurveyQuestion = {
   key: string;
   questionText: string;
@@ -41,13 +51,14 @@ export type MultiStepSurveyQuestion = {
     value: any;
   }>;
   skipable?: boolean;
+  visibleIf?: () => VisibleIfType;
   isPresent?: (values: AllSurveyValues) => boolean;
   isValid?: (value: any, allValues: AllSurveyValues) => boolean;
 };
 
 export const surveyList: Array<MultiStepSurveyQuestion> = [
   {
-    key: '1',
+    key: 'learning-remote',
     questionText: 'Do you enjoy learning remotely?',
     answerComponent: Radio,
     answers: [
@@ -63,14 +74,39 @@ export const surveyList: Array<MultiStepSurveyQuestion> = [
     skipable: false,
   },
   {
-    key: '2',
+    key: 'have-a-dog',
+    questionText: 'Do you have a dog?',
+    answers: [
+      {
+        label: 'Yes',
+        value: 'Yes',
+      },
+      {
+        label: 'No',
+        value: 'No',
+      },
+    ],
+    skipable: false,
+    answerComponent: Radio,
+  },
+  {
+    key: 'strengths-school',
     questionText:
       'Are there any specific strengths of this school that you would like to address?',
     skipable: false,
     answerComponent: Input,
   },
   {
-    key: '3',
+    key: 'dog-name',
+    questionText: 'What’s your dog’s name?',
+    answerComponent: Input,
+    visibleIf: () => ({
+      key: 'have-a-dog',
+      value: 'Yes',
+    }),
+  },
+  {
+    key: 'guidance-counselor',
     questionText: 'How helpful is your guidance counselor?',
     skipable: true,
     initialValue: 'Helpful',
@@ -93,27 +129,5 @@ export const surveyList: Array<MultiStepSurveyQuestion> = [
         label: 'Not Helpful',
       },
     ],
-  },
-  {
-    key: '4',
-    questionText: 'Do you have a dog?',
-    answers: [
-      {
-        label: 'Yes',
-        value: 'Yes',
-      },
-      {
-        label: 'No',
-        value: 'No',
-      },
-    ],
-    skipable: false,
-    answerComponent: Radio,
-  },
-  {
-    key: '5',
-    questionText: 'What’s your dog’s name?',
-    answerComponent: Input,
-    isPresent: value => value?.value === 'Yes',
   },
 ];

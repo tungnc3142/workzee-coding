@@ -1,10 +1,10 @@
 import {StyleSheet} from 'react-native';
-import {AllSurveyValues, surveyList} from '../mockupData';
+import {AnswerType, surveyList} from '../mockupData';
 import {Box, FlatList, Flex, IconButton, Text, DeleteIcon} from 'native-base';
 import React, {FC} from 'react';
 
 type Props = {
-  answers: Array<AllSurveyValues>;
+  answers: Array<AnswerType>;
   onEditAnswer: (index: number) => void;
 };
 
@@ -16,18 +16,12 @@ export const SurveyResult: FC<Props> = ({answers, onEditAnswer}) => {
   const onPressIcon = (index: number) => () => {
     onEditAnswer(index);
   };
-  const renderItem = ({
-    item,
-    index,
-  }: {
-    item: AllSurveyValues;
-    index: number;
-  }) => {
+  const renderItem = ({item, index}: {item: AnswerType; index: number}) => {
     if (item.value === undefined) {
       return null;
     }
     return (
-      <Box key={index} marginBottom={5}>
+      <Box key={item.key} marginBottom={5}>
         <Flex direction="row" alignItems="center">
           <Text bold style={styles.container}>
             {index + 1}.{surveyList[index].questionText}

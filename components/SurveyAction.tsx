@@ -6,6 +6,7 @@ type Props = {
   disablePrevious?: boolean;
   onNext: () => void;
   onPrev: () => void;
+  onShowResult: () => void;
   isLastQuestion?: boolean;
 };
 
@@ -14,6 +15,7 @@ export const SurveyAction: FC<Props> = ({
   disablePrevious,
   onPrev,
   onNext,
+  onShowResult,
   isLastQuestion,
 }) => {
   return (
@@ -35,7 +37,7 @@ export const SurveyAction: FC<Props> = ({
             Next
           </Button>
         ) : (
-          <Button width="48%" marginLeft={3} onPress={onNext}>
+          <Button width="48%" marginLeft={3} onPress={onShowResult}>
             Get summary survey
           </Button>
         )}

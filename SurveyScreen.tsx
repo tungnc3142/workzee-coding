@@ -1,6 +1,6 @@
 import React, {useCallback, useEffect, useMemo, useState} from 'react';
 import {StyleSheet} from 'react-native';
-import {AllSurveyValues, surveyList} from './mockupData';
+import {AnswerType, MultiStepSurveyQuestion, surveyList} from './mockupData';
 import {Box, FormControl} from 'native-base';
 import {SafeAreaView} from 'react-native-safe-area-context';
 import {
@@ -10,12 +10,8 @@ import {
   SurveyTitle,
 } from './components';
 
-export type AnswerType = {
-  value: any;
-};
-
 const SurveyScreen: React.FC = ({}) => {
-  const [answers, setAnswer] = useState<Array<AllSurveyValues>>([]);
+  const [answers, setAnswer] = useState<Array<AnswerType>>([]);
   const [currentSurveyIndex, setCurrentSurvey] = useState<number>(0);
   const [isInvalid, setIsInvalid] = useState<boolean>(false);
   const [showResult, setShowResult] = useState<boolean>(false);
@@ -40,11 +36,6 @@ const SurveyScreen: React.FC = ({}) => {
     return 'Please enter the answer';
   }, [currentSurveyIndex]);
 
-  const showResultAfterEditAnswer = useCallback(() => {
-    setShowResult(true);
-    setIsEditQuestion(false);
-  }, []);
-
   const updateAnswerValue = useCallback((value: any, index: number) => {
     setAnswer(prev => {
       const _allAnswer = [...prev];
@@ -52,6 +43,51 @@ const SurveyScreen: React.FC = ({}) => {
       return _allAnswer;
     });
   }, []);
+
+  const isShowAnswerDependentAfterEdit = useCallback(
+    (answerCanVisible: MultiStepSurveyQuestion, currentAnswer: AnswerType) => {
+      if (
+        answerCanVisible &&
+        answerCanVisible.visibleIf &&
+        currentAnswer.key === answerCanVisible.visibleIf().key
+      ) {
+        if (currentAnswer.value === answerCanVisible.visibleIf().value) {
+          return true;
+        }
+      }
+      return false;
+    },
+    [],
+  );
+
+  const showResultAfterEditAnswer = useCallback(() => {
+    // check if current question has child question -> show or remove answer in results
+    const currentAnswer = answers[currentSurveyIndex];
+    const answerCanVisibleIndex = surveyList.findIndex(s => s.visibleIf);
+    if (answerCanVisibleIndex !== -1) {
+      const answerCanVisible = surveyList[answerCanVisibleIndex];
+      if (isShowAnswerDependentAfterEdit(answerCanVisible, currentAnswer)) {
+        setCurrentSurvey(answerCanVisibleIndex);
+        return;
+      }
+
+      if (
+        answerCanVisible.visibleIf &&
+        currentAnswer.value === answerCanVisible.visibleIf().value
+      ) {
+        updateAnswerValue(undefined, answerCanVisibleIndex);
+      }
+    }
+    setShowResult(true);
+    setIsEditQuestion(false);
+  }, [
+    answers,
+    currentSurveyIndex,
+    isShowAnswerDependentAfterEdit,
+    updateAnswerValue,
+  ]);
+
+  const onShowResult = useCallback(() => setShowResult(true), []);
 
   const onPrev = useCallback(() => {
     if (!checkIsValidAnswer()) {
@@ -69,47 +105,22 @@ const SurveyScreen: React.FC = ({}) => {
       setIsInvalid(true);
       return;
     }
+
     if (isInvalid) {
       setIsInvalid(false);
     }
 
-    if (currentSurveyIndex === surveyList.length - 1) {
-      setShowResult(true);
+    // TODO: check is edit question mode -> show summary result
+    if (isEditQuestion) {
+      showResultAfterEditAnswer();
       return;
     }
-    // TODO: check is next question is present
-    const nextQuestion = surveyList[currentSurveyIndex + 1];
-    const currentAnswer = answers[currentSurveyIndex];
-    if (nextQuestion.isPresent !== undefined) {
-      // TODO: show question present
-      if (nextQuestion.isPresent(currentAnswer)) {
-        setCurrentSurvey(prev => prev + 1);
-      } else {
-        // show next question of nextQuestion variable(rule: There are questions that are only present if other question has particular value)
-        if (currentSurveyIndex + 2 < surveyList.length - 1) {
-          setCurrentSurvey(prev => prev + 2);
-        } else {
-          // is last question in survey
-          setShowResult(true);
-        }
-        // set result answer of nextQuestion variable to undefined
-        updateAnswerValue(undefined, currentSurveyIndex + 1);
-      }
-    } else {
-      if (isEditQuestion) {
-        showResultAfterEditAnswer();
-        return;
-      }
-      setCurrentSurvey(prev => prev + 1);
-    }
+    setCurrentSurvey(prev => prev + 1);
   }, [
-    answers,
     checkIsValidAnswer,
-    currentSurveyIndex,
     isEditQuestion,
     isInvalid,
     showResultAfterEditAnswer,
-    updateAnswerValue,
   ]);
 
   const disableNext = useMemo(() => {
@@ -127,12 +138,35 @@ const SurveyScreen: React.FC = ({}) => {
   }, []);
 
   useEffect(() => {
+    const currentSurvey = surveyList[currentSurveyIndex];
+    if (
+      currentSurveyIndex <= surveyList.length - 1 &&
+      currentSurvey &&
+      currentSurvey.visibleIf
+    ) {
+      const {key, value} = currentSurvey.visibleIf();
+      const isVisible =
+        answers.findIndex(a => a.key === key && a.value === value) !== -1;
+      if (!isVisible) {
+        if (currentSurveyIndex === surveyList.length - 1) {
+          // question dependent is last survey -> show summary survey
+          setShowResult(true);
+          return;
+        }
+        setCurrentSurvey(prev => prev + 1);
+      }
+    }
+  }, [answers, currentSurveyIndex]);
+
+  useEffect(() => {
     const initialAnswer: Array<AnswerType> = [];
     var answer: AnswerType = {
       value: '',
+      key: '',
     };
     surveyList.forEach(s => {
       answer = {
+        key: s.key,
         value: s?.initialValue || undefined,
       };
       initialAnswer.push(answer);
@@ -165,6 +199,7 @@ const SurveyScreen: React.FC = ({}) => {
             <SurveyAction
               onPrev={onPrev}
               onNext={onNext}
+              onShowResult={onShowResult}
               disableNext={disableNext}
               disablePrevious={disablePrevious}
               isLastQuestion={currentSurveyIndex === surveyList.length - 1}
